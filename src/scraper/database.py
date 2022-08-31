@@ -1,9 +1,35 @@
 # database.py
 """Functions that are accessing and modifying the database."""
 
+import sqlite3
 from typing import List, Dict
 import pymysql
+
+# import pymysql
 import logging
+
+db_file = r".\sqlite.db"
+
+
+def create_connection(db_file):
+    """create a database connection to a SQLite database"""
+    conn = None
+    try:
+        conn = pymysql.connect(
+            host="localhost", user="root", passwd="root", db="SoccerStats"
+        )
+
+        # conn = sqlite3.connect(db_file)
+
+        cur = conn.cursor()
+        return conn, cur
+
+    except Exception as e:
+        print(e)
+        print(
+            "database: connect_to_db: "
+            "Exception was raised when trying to establish a connection to mysql."
+        )
 
 
 def connect_to_db():
@@ -11,15 +37,17 @@ def connect_to_db():
     Establish a connection with the database.
 
     Returns:
-        conn -- pymysql connection object
+        conn -- sqlite connection object
         cur -- database cursor for the current connection
     """
     try:
-        conn = pymysql.connect(
-            host="localhost", user="root", passwd="", db="SoccerStats"
-        )
-        cur = conn.cursor()
-        return conn, cur
+        # conn = pymysql.connect(
+        #     host="localhost", user="root", passwd="", db="SoccerStats"
+        # )
+        # cur = conn.cursor()
+        # return conn, cur
+
+        return create_connection(db_file)
 
     except:
         print(
@@ -37,8 +65,8 @@ def close_db_connection(conn, cur) -> None:
         cur -- database cursor object
     """
     try:
-        conn.close()
         cur.close()
+        conn.close()
     except:
         print(
             "database: close_db_connection: "
@@ -79,12 +107,16 @@ def create_info_table() -> None:
         print(
             "database: create_info_table: Exception was raised when trying to create a table."
         )
+    finally:
+        close_db_connection(conn, cur)
 
     # Add columns
     for col in HEADER:
 
         # Add columns with int type
         if isinstance(HEADER[col], int):
+            conn, cur = connect_to_db()
+
             try:
                 cur.execute(f"ALTER TABLE info ADD COLUMN {col} INT;")
             except:
@@ -92,9 +124,13 @@ def create_info_table() -> None:
                     f"database: create_info_table: "
                     f"Exception was raised when trying to add int column{col}."
                 )
+            finally:
+                close_db_connection(conn, cur)
 
         # Add columns with string type
         else:
+            conn, cur = connect_to_db()
+
             try:
                 cur.execute(f"ALTER TABLE info ADD COLUMN {col} VARCHAR(50);")
             except:
@@ -102,8 +138,8 @@ def create_info_table() -> None:
                     f"database: create_info_table: "
                     f"Exception was raised when trying to add string column {col}."
                 )
-
-    close_db_connection(conn, cur)
+            finally:
+                close_db_connection(conn, cur)
 
 
 def create_stats_tables(tables: List[List[str]]) -> None:
@@ -119,6 +155,8 @@ def create_stats_tables(tables: List[List[str]]) -> None:
 
     # Create tables
     for table in tables:
+        conn, cur = connect_to_db()
+
         try:
             cur.execute(
                 f"CREATE TABLE IF NOT EXISTS {table[0]} "
@@ -131,6 +169,8 @@ def create_stats_tables(tables: List[List[str]]) -> None:
                 f"database: create_stats_table: "
                 f"Exception was raised when trying to create table {table[0]}."
             )
+        finally:
+            close_db_connection(conn, cur)
 
         # Add columns for each table
         for index, column in enumerate(table):
@@ -146,6 +186,8 @@ def create_stats_tables(tables: List[List[str]]) -> None:
             ]:
                 continue
 
+            conn, cur = connect_to_db()
+
             try:
                 cur.execute(f"ALTER TABLE {table[0]} ADD COLUMN {column} FLOAT;")
             except:
@@ -153,8 +195,8 @@ def create_stats_tables(tables: List[List[str]]) -> None:
                     f"database: create_stats_tables: "
                     f"Exception was raised when trying to add a column {column}."
                 )
-
-    close_db_connection(conn, cur)
+            finally:
+                close_db_connection(conn, cur)
 
 
 def add_info(info: Dict) -> None:
@@ -166,13 +208,13 @@ def add_info(info: Dict) -> None:
         info -- A dictionary with column names as keys and player information as values.
              -- for example {'name':'Thibaut Courtois', 'position':'GK', ..., 'age':29}
     """
-    conn, cur = connect_to_db()
-
     # Add data into the info table
     for key in info:
 
         # Insert primary key
         if key == "id":
+            conn, cur = connect_to_db()
+
             try:
                 cur.execute(f"REPLACE INTO info ({key}) " f"VALUES ('{info[key]}');")
                 cur.connection.commit()
@@ -181,10 +223,16 @@ def add_info(info: Dict) -> None:
                     "database: add_info: "
                     "Exception was raised when trying to insert primary key (id)."
                 )
+            finally:
+                close_db_connection(conn, cur)
 
         # Insert data
         else:
+            conn, cur = connect_to_db()
+
             try:
+                conn, cur = connect_to_db()
+
                 cur.execute(
                     f"UPDATE info "
                     f'SET {key} = "{info[key]}"'
@@ -192,9 +240,10 @@ def add_info(info: Dict) -> None:
                 )
                 cur.connection.commit()
             except:
-
                 logging.error(key)
+
                 logging.error(info["id"])
+
                 if key in info:
                     logging.error(info[key])
                 else:
@@ -203,8 +252,8 @@ def add_info(info: Dict) -> None:
                 print(
                     "database: add_info: Exception was raised when trying to update a column."
                 )
-
-    close_db_connection(conn, cur)
+            finally:
+                close_db_connection(conn, cur)
 
 
 def add_stats(stats: List[Dict]) -> None:
@@ -216,10 +265,10 @@ def add_stats(stats: List[Dict]) -> None:
               -- each dictionary represents a row of a table
               -- (for example playing time for a player in a single season)
     """
-    conn, cur = connect_to_db()
 
     # Iterate over the dictionaries each of which represents one row of a table
     for row in stats:
+        conn, cur = connect_to_db()
 
         # Insert the string attributes from a table row
         try:
@@ -236,6 +285,8 @@ def add_stats(stats: List[Dict]) -> None:
                 "database: add_stats: "
                 "Exception was raised when trying to insert string columns."
             )
+        finally:
+            close_db_connection(conn, cur)
 
         # Iterate over the dict keys each of which represents a table's columns
         for column in row:
@@ -252,18 +303,17 @@ def add_stats(stats: List[Dict]) -> None:
             ]:
                 continue
 
+            conn, cur = connect_to_db()
+
             # Insert data into appropriate columns
             try:
-                statement = f"""UPDATE {row['table']} SET {column} = {float(row[column].replace(',',''))}
-                            WHERE id = '{row['id']}' AND season = '{row['season']}' AND squad = %s;"""
-
                 team = row["team"].replace("'", "")
                 team = team.replace('"', "")
 
-                cur.execute(
-                    statement,
-                    (team,),
-                )
+                statement = f"""UPDATE {row['table']} SET {column} = {float(row[column].replace(',',''))}
+                            WHERE id = '{row['id']}' AND season = '{row['season']}' AND squad = '{team}';"""
+
+                cur.execute(statement)
                 cur.connection.commit()
             except Exception as e:
                 logging.error(e)
@@ -274,5 +324,5 @@ def add_stats(stats: List[Dict]) -> None:
                     f"database: add_stats: "
                     f"Exception was raised when trying to update column {column} for player {row['id']}."
                 )
-
-    close_db_connection(conn, cur)
+            finally:
+                close_db_connection(conn, cur)

@@ -25,8 +25,6 @@ def scrape_info(player):
     url = f"https://fbref.com{player}"
     soup = get_soup(url)
 
-    logging.error(url)
-
     try:
         header = json.loads(soup.find("script", type="application/ld+json").string)
     except:
@@ -40,7 +38,6 @@ def scrape_info(player):
     # Find the unique player ID
     try:
         info["id"] = player[12:20]
-        logging.error(f"id: {info['id']}")
     except:
         print(
             "playerInfo: scrape_info: Exception was raised when trying to scrape player id."
@@ -66,7 +63,7 @@ def scrape_info(player):
         if secondname != "":
             info["name"] = f"{firstname} {secondname}"
 
-        logging.error(f"name: {info['name']}")
+        logging.info(f"name: {info['name']}")
     except:
         print(
             "playerInfo: scrape_info: Exception was raised when trying to scrape player name."
