@@ -12,26 +12,26 @@ from player_stats import get_stats_headers, scrape_stats
 
 # List of leagues to crawl
 LEAGUES = [
-    '/en/comps/12/La-Liga-Stats',
-    '/en/comps/13/Ligue-1-Stats',
-    '/en/comps/9/Premier-League-Stats',
-    '/en/comps/20/Bundesliga-Stats',
-    '/en/comps/11/Serie-A-Stats'
+    "/en/comps/12/La-Liga-Stats",
+    "/en/comps/13/Ligue-1-Stats",
+    "/en/comps/9/Premier-League-Stats",
+    "/en/comps/20/Bundesliga-Stats",
+    "/en/comps/11/Serie-A-Stats",
 ]
 
 # List of tables to collect per player
 TABLES = [
-    'stats_standard_dom_lg',
-    'stats_shooting_dom_lg',
-    'stats_passing_dom_lg',
-    'stats_passing_types_dom_lg',
-    'stats_gca_dom_lg',
-    'stats_defense_dom_lg',
-    'stats_possession_dom_lg',
-    'stats_playing_time_dom_lg',
-    'stats_misc_dom_lg',
-    'stats_keeper_dom_lg',
-    'stats_keeper_adv_dom_lg',
+    "stats_standard_dom_lg",
+    "stats_shooting_dom_lg",
+    "stats_passing_dom_lg",
+    "stats_passing_types_dom_lg",
+    "stats_gca_dom_lg",
+    "stats_defense_dom_lg",
+    "stats_possession_dom_lg",
+    "stats_playing_time_dom_lg",
+    "stats_misc_dom_lg",
+    "stats_keeper_dom_lg",
+    "stats_keeper_adv_dom_lg",
 ]
 
 
@@ -44,7 +44,7 @@ def scrape(player: str) -> None:
         player -- Unique player url path.
     """
 
-    time.sleep(.5)
+    time.sleep(0.5)
     player_start = time.time()
 
     player_info = scrape_info(player)
@@ -55,8 +55,10 @@ def scrape(player: str) -> None:
 
     player_end = time.time()
 
-    print(f'Scraped and stored player data for Id: {player_info["id"]}, Name: {player_info["name"]}.'
-          f' Elapsed time = {player_end - player_start:.2f}s.')
+    print(
+        f'Scraped and stored player data for Id: {player_info["id"]}, Name: {player_info["name"]}.'
+        f" Elapsed time = {player_end - player_start:.2f}s."
+    )
 
 
 def crawl(leagues: List[str]) -> None:
@@ -69,13 +71,13 @@ def crawl(leagues: List[str]) -> None:
     """
 
     # A single player will be used to determine the table format
-    PLAYER = '/en/players/1840e36d/Thibaut-Courtois'
+    PLAYER = "/en/players/1840e36d/Thibaut-Courtois"
     player_tables = get_stats_headers(PLAYER, TABLES)
 
     db.create_info_table()
     db.create_stats_tables(player_tables)
 
-    pool = Pool()
+    pool = Pool(processes=None)
 
     for league in leagues:
         for squad in get_squads(league):
