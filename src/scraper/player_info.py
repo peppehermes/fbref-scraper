@@ -127,7 +127,14 @@ def scrape_info(player):
 
     # Find player;s country of birth
     try:
-        info["countryob"] = header["birthPlace"].split(",")[1].strip()
+        splitted_birthPlace = header["birthPlace"].split(",")
+
+        if len(splitted_birthPlace) > 1:
+            country = header["birthPlace"].split(",")[1].strip()
+        else:
+            country = splitted_birthPlace[0].strip()
+
+        info["countryob"] = country
     except:
         logging.error(header["birthPLace"])
 

@@ -8,18 +8,18 @@ import pymysql
 # import pymysql
 import logging
 
-db_file = r".\sqlite.db"
+db_file = r"sqlite.db"
 
 
 def create_connection(db_file):
     """create a database connection to a SQLite database"""
     conn = None
     try:
-        conn = pymysql.connect(
-            host="localhost", user="root", passwd="root", db="SoccerStats"
-        )
+        # conn = pymysql.connect(
+        #     host="localhost", user="root", passwd="root", db="SoccerStats"
+        # )
 
-        # conn = sqlite3.connect(db_file)
+        conn = sqlite3.connect(db_file)
 
         cur = conn.cursor()
         return conn, cur
