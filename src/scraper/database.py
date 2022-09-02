@@ -82,14 +82,11 @@ def create_info_table() -> None:
     """
     HEADER = {
         "name": "",
-        "position": "",
-        "foot": "",
         "height": 0,
         "weight": 0,
         "dob": "",
         "cityob": "",
         "countryob": "",
-        "nt": "",
         "club": "",
         "age": 0,
     }
