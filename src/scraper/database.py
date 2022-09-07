@@ -1,11 +1,13 @@
 # database.py
 """Functions that are accessing and modifying the database."""
 
-import sqlite3
 from typing import List, Dict
+
 import pymysql
 
-# import pymysql
+# import psycopg2
+# import sqlite3
+
 import logging
 
 db_file = r"sqlite.db"
@@ -15,11 +17,18 @@ def create_connection(db_file):
     """create a database connection to a SQLite database"""
     conn = None
     try:
-        # conn = pymysql.connect(
-        #     host="localhost", user="root", passwd="root", db="SoccerStats"
-        # )
+        conn = pymysql.connect(
+            host="localhost", user="username", passwd="password", db="SoccerStats"
+        )
 
-        conn = sqlite3.connect(db_file)
+        # conn = sqlite3.connect(db_file)
+
+        # conn = psycopg2.connect(
+        #     host="localhost",
+        #     database="soccerstats",
+        #     user="postgres",
+        #     password="password",
+        # )
 
         cur = conn.cursor()
         return conn, cur
@@ -94,6 +103,18 @@ def create_info_table() -> None:
     conn, cur = connect_to_db()
 
     try:
+        cur.execute("DROP TABLE IF EXISTS info;")
+    except:
+        print(
+            f"database: create_info_table: "
+            f"Exception was raised when trying to drop table info."
+        )
+    finally:
+        close_db_connection(conn, cur)
+
+    conn, cur = connect_to_db()
+
+    try:
         cur.execute(
             "CREATE TABLE IF NOT EXISTS "
             "info (id VARCHAR(8) NOT NULL, "
@@ -152,6 +173,18 @@ def create_stats_tables(tables: List[List[str]]) -> None:
 
     # Create tables
     for table in tables:
+        conn, cur = connect_to_db()
+
+        try:
+            cur.execute(f"DROP TABLE IF EXISTS {table[0]} ")
+        except:
+            print(
+                f"database: create_stats_table: "
+                f"Exception was raised when trying to drop table {table[0]}."
+            )
+        finally:
+            close_db_connection(conn, cur)
+
         conn, cur = connect_to_db()
 
         try:
@@ -270,13 +303,15 @@ def add_stats(stats: List[Dict]) -> None:
         # Insert the string attributes from a table row
         try:
             statement = f"""REPLACE INTO {row['table']} (id, season, squad, country, comp_level, lg_finish) \
-                        VALUES ('{row['id']}', '{row['season']}', '{row['team']}', '{row['country'].split()[1]}', \
+                        VALUES ('{row['id']}', '{row['season']}', "{row['team']}", '{row['country'].split()[1]}', \
                          '{row['comp_level']}', '{row['lg_finish']}');"""
 
             cur.execute(statement)
             cur.connection.commit()
         except Exception as e:
             logging.error(e)
+
+            logging.error(statement)
 
             print(
                 "database: add_stats: "
@@ -304,11 +339,11 @@ def add_stats(stats: List[Dict]) -> None:
 
             # Insert data into appropriate columns
             try:
-                team = row["team"].replace("'", "")
-                team = team.replace('"', "")
+                team = row["team"].replace("'", "\\'")
+                team = team.replace('"', '\\"')
 
                 statement = f"""UPDATE {row['table']} SET {column} = {float(row[column].replace(',',''))}
-                            WHERE id = '{row['id']}' AND season = '{row['season']}' AND squad = '{team}';"""
+                            WHERE id = '{row['id']}' AND season = '{row['season']}' AND squad = "{team}";"""
 
                 cur.execute(statement)
                 cur.connection.commit()
