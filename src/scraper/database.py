@@ -2,33 +2,19 @@
 """Functions that are accessing and modifying the database."""
 
 from typing import List, Dict
-
-import pymysql
-
-# import psycopg2
-# import sqlite3
-
+import mysql.connector
 import logging
 
-db_file = r"sqlite.db"
+DB = "SoccerStats"
 
 
-def create_connection(db_file):
-    """create a database connection to a SQLite database"""
+def create_connection(database=None):
+    """ Create a database connection to a MySQL database """
     conn = None
     try:
-        conn = pymysql.connect(
-            host="localhost", user="username", passwd="password", db="SoccerStats"
+        conn = mysql.connector.connect(
+            host="localhost", user="microservice", password="MyFirstMicroservice", database=database
         )
-
-        # conn = sqlite3.connect(db_file)
-
-        # conn = psycopg2.connect(
-        #     host="localhost",
-        #     database="soccerstats",
-        #     user="postgres",
-        #     password="password",
-        # )
 
         cur = conn.cursor()
         return conn, cur
@@ -41,7 +27,7 @@ def create_connection(db_file):
         )
 
 
-def connect_to_db():
+def connect_to_db(db=None):
     """
     Establish a connection with the database.
 
@@ -50,13 +36,7 @@ def connect_to_db():
         cur -- database cursor for the current connection
     """
     try:
-        # conn = pymysql.connect(
-        #     host="localhost", user="root", passwd="", db="SoccerStats"
-        # )
-        # cur = conn.cursor()
-        # return conn, cur
-
-        return create_connection(db_file)
+        return create_connection(database=db)
 
     except:
         print(
@@ -83,6 +63,21 @@ def close_db_connection(conn, cur) -> None:
         )
 
 
+def create_db():
+    """ Create the SoccerStats database """
+    conn, cur = connect_to_db()
+
+    try:
+        cur.execute(f"CREATE DATABASE IF NOT EXISTS {DB};")
+    except:
+        print(
+            f"database: create_db: "
+            f"Exception was raised when trying to create database {DB}."
+        )
+    finally:
+        close_db_connection(conn, cur)
+
+
 def create_info_table() -> None:
     """
     Create a database table to hold general information about a player.
@@ -100,7 +95,7 @@ def create_info_table() -> None:
         "age": 0,
     }
 
-    conn, cur = connect_to_db()
+    conn, cur = connect_to_db(db=DB)
 
     try:
         cur.execute("DROP TABLE IF EXISTS info;")
@@ -112,7 +107,7 @@ def create_info_table() -> None:
     finally:
         close_db_connection(conn, cur)
 
-    conn, cur = connect_to_db()
+    conn, cur = connect_to_db(db=DB)
 
     try:
         cur.execute(
@@ -133,21 +128,22 @@ def create_info_table() -> None:
 
         # Add columns with int type
         if isinstance(HEADER[col], int):
-            conn, cur = connect_to_db()
+            conn, cur = connect_to_db(db=DB)
 
             try:
                 cur.execute(f"ALTER TABLE info ADD COLUMN {col} INT;")
-            except:
+            except Exception as e:
+                logging.error(e)
                 print(
                     f"database: create_info_table: "
-                    f"Exception was raised when trying to add int column{col}."
+                    f"Exception was raised when trying to add int column {col}."
                 )
             finally:
                 close_db_connection(conn, cur)
 
         # Add columns with string type
         else:
-            conn, cur = connect_to_db()
+            conn, cur = connect_to_db(db=DB)
 
             try:
                 cur.execute(f"ALTER TABLE info ADD COLUMN {col} VARCHAR(50);")
@@ -173,7 +169,7 @@ def create_stats_tables(tables: List[List[str]]) -> None:
 
     # Create tables
     for table in tables:
-        conn, cur = connect_to_db()
+        conn, cur = connect_to_db(db=DB)
 
         try:
             cur.execute(f"DROP TABLE IF EXISTS {table[0]} ")
@@ -185,7 +181,7 @@ def create_stats_tables(tables: List[List[str]]) -> None:
         finally:
             close_db_connection(conn, cur)
 
-        conn, cur = connect_to_db()
+        conn, cur = connect_to_db(db=DB)
 
         try:
             cur.execute(
@@ -216,7 +212,7 @@ def create_stats_tables(tables: List[List[str]]) -> None:
             ]:
                 continue
 
-            conn, cur = connect_to_db()
+            conn, cur = connect_to_db(db=DB)
 
             try:
                 cur.execute(f"ALTER TABLE {table[0]} ADD COLUMN {column} FLOAT;")
@@ -243,11 +239,11 @@ def add_info(info: Dict) -> None:
 
         # Insert primary key
         if key == "id":
-            conn, cur = connect_to_db()
+            conn, cur = connect_to_db(db=DB)
 
             try:
                 cur.execute(f"REPLACE INTO info ({key}) " f"VALUES ('{info[key]}');")
-                cur.connection.commit()
+                conn.commit()
             except:
                 print(
                     "database: add_info: "
@@ -258,17 +254,15 @@ def add_info(info: Dict) -> None:
 
         # Insert data
         else:
-            conn, cur = connect_to_db()
+            conn, cur = connect_to_db(db=DB)
 
             try:
-                conn, cur = connect_to_db()
-
                 cur.execute(
                     f"UPDATE info "
                     f'SET {key} = "{info[key]}"'
                     f'WHERE id = "{info["id"]}";'
                 )
-                cur.connection.commit()
+                conn.commit()
             except:
                 logging.error(key)
 
@@ -298,7 +292,7 @@ def add_stats(stats: List[Dict]) -> None:
 
     # Iterate over the dictionaries each of which represents one row of a table
     for row in stats:
-        conn, cur = connect_to_db()
+        conn, cur = connect_to_db(db=DB)
 
         # Insert the string attributes from a table row
         try:
@@ -307,7 +301,7 @@ def add_stats(stats: List[Dict]) -> None:
                          '{row['comp_level']}', '{row['lg_finish']}');"""
 
             cur.execute(statement)
-            cur.connection.commit()
+            conn.commit()
         except Exception as e:
             logging.error(e)
 
@@ -335,7 +329,7 @@ def add_stats(stats: List[Dict]) -> None:
             ]:
                 continue
 
-            conn, cur = connect_to_db()
+            conn, cur = connect_to_db(db=DB)
 
             # Insert data into appropriate columns
             try:
@@ -346,7 +340,7 @@ def add_stats(stats: List[Dict]) -> None:
                             WHERE id = '{row['id']}' AND season = '{row['season']}' AND squad = "{team}";"""
 
                 cur.execute(statement)
-                cur.connection.commit()
+                conn.commit()
             except Exception as e:
                 logging.error(e)
 

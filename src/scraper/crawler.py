@@ -74,6 +74,7 @@ def crawl(leagues: List[str]) -> None:
     PLAYER = "/en/players/1840e36d/Thibaut-Courtois"
     player_tables = get_stats_headers(PLAYER, TABLES)
 
+    db.create_db()
     db.create_info_table()
     db.create_stats_tables(player_tables)
 
