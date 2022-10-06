@@ -3,9 +3,11 @@
 
 from typing import List, Dict
 import mysql.connector
-import logging
+
+from src.scraper.logger import get_logger
 
 DB = "SoccerStats"
+my_logger = get_logger(__name__)
 
 
 def create_connection(database=None):
@@ -20,8 +22,8 @@ def create_connection(database=None):
         return conn, cur
 
     except Exception as e:
-        print(e)
-        print(
+        my_logger.error(e)
+        my_logger.error(
             "database: connect_to_db: "
             "Exception was raised when trying to establish a connection to mysql."
         )
@@ -39,7 +41,7 @@ def connect_to_db(db=None):
         return create_connection(database=db)
 
     except:
-        print(
+        my_logger.error(
             "database: connect_to_db: "
             "Exception was raised when trying to establish a connection to mysql."
         )
@@ -57,7 +59,7 @@ def close_db_connection(conn, cur) -> None:
         cur.close()
         conn.close()
     except:
-        print(
+        my_logger.error(
             "database: close_db_connection: "
             "Exception was raised when trying to close the connection/cursor."
         )
@@ -70,9 +72,55 @@ def create_db():
     try:
         cur.execute(f"CREATE DATABASE IF NOT EXISTS {DB};")
     except:
-        print(
+        my_logger.error(
             f"database: create_db: "
             f"Exception was raised when trying to create database {DB}."
+        )
+    finally:
+        close_db_connection(conn, cur)
+
+
+def drop_info_table() -> None:
+    conn, cur = connect_to_db(db=DB)
+
+    try:
+        cur.execute("DROP TABLE IF EXISTS info;")
+    except:
+        my_logger.error(
+            f"database: create_info_table: "
+            f"Exception was raised when trying to drop table info."
+        )
+    finally:
+        close_db_connection(conn, cur)
+
+
+def add_int_column_info_table(column) -> None:
+    # Add column with int type
+    if isinstance(column, int):
+        conn, cur = connect_to_db(db=DB)
+
+        try:
+            cur.execute(f"ALTER TABLE info ADD COLUMN IF NOT EXISTS {column} INT;")
+        except Exception as e:
+            my_logger.error(e)
+            my_logger.error(
+                f"database: create_info_table: "
+                f"Exception was raised when trying to add int column {column}."
+            )
+        finally:
+            close_db_connection(conn, cur)
+
+
+def add_string_column_info_table(column) -> None:
+    # Add column with string type
+    conn, cur = connect_to_db(db=DB)
+
+    try:
+        cur.execute(f"ALTER TABLE info ADD COLUMN IF NOT EXISTS {column} VARCHAR(50);")
+    except:
+        my_logger.error(
+            f"database: create_info_table: "
+            f"Exception was raised when trying to add string column {column}."
         )
     finally:
         close_db_connection(conn, cur)
@@ -84,28 +132,6 @@ def create_info_table() -> None:
     This db table is created separately from the stats tables because
     this information is not in a html table like the other stats.
     """
-    HEADER = {
-        "name": "",
-        "height": 0,
-        "weight": 0,
-        "dob": "",
-        "cityob": "",
-        "countryob": "",
-        "club": "",
-        "age": 0,
-    }
-
-    conn, cur = connect_to_db(db=DB)
-
-    try:
-        cur.execute("DROP TABLE IF EXISTS info;")
-    except:
-        print(
-            f"database: create_info_table: "
-            f"Exception was raised when trying to drop table info."
-        )
-    finally:
-        close_db_connection(conn, cur)
 
     conn, cur = connect_to_db(db=DB)
 
@@ -117,43 +143,89 @@ def create_info_table() -> None:
             "PRIMARY KEY(id));"
         )
     except:
-        print(
+        my_logger.error(
             "database: create_info_table: Exception was raised when trying to create a table."
         )
     finally:
         close_db_connection(conn, cur)
+
+
+def add_info_columns() -> None:
+    HEADER = {
+        "name": "",
+        "height": 0,
+        "weight": 0,
+        "dob": "",
+        "cityob": "",
+        "countryob": "",
+        "club": "",
+        "age": 0,
+    }
 
     # Add columns
     for col in HEADER:
 
         # Add columns with int type
         if isinstance(HEADER[col], int):
-            conn, cur = connect_to_db(db=DB)
-
-            try:
-                cur.execute(f"ALTER TABLE info ADD COLUMN {col} INT;")
-            except Exception as e:
-                logging.error(e)
-                print(
-                    f"database: create_info_table: "
-                    f"Exception was raised when trying to add int column {col}."
-                )
-            finally:
-                close_db_connection(conn, cur)
+            add_int_column_info_table(col)
 
         # Add columns with string type
         else:
-            conn, cur = connect_to_db(db=DB)
+            add_string_column_info_table(col)
 
-            try:
-                cur.execute(f"ALTER TABLE info ADD COLUMN {col} VARCHAR(50);")
-            except:
-                print(
-                    f"database: create_info_table: "
-                    f"Exception was raised when trying to add string column {col}."
-                )
-            finally:
-                close_db_connection(conn, cur)
+
+def drop_stats_table(table: str) -> None:
+    conn, cur = connect_to_db(db=DB)
+
+    try:
+        cur.execute(f"DROP TABLE IF EXISTS {table} ")
+    except:
+        my_logger.error(
+            f"database: create_stats_table: "
+            f"Exception was raised when trying to drop table {table}."
+        )
+    finally:
+        close_db_connection(conn, cur)
+
+
+def drop_stats_tables(tables: List[List[str]]) -> None:
+    # Drop tables
+    for table in tables:
+        drop_stats_table(table[0])
+
+
+def add_stats_columns(table: List[str]) -> None:
+    # Add columns
+    for index, column in enumerate(table):
+
+        # Don't create columns for table name and other string columns
+        if index == 0 or column in [
+            "season",
+            "squad",
+            "team",
+            "country",
+            "comp_level",
+            "lg_finish",
+        ]:
+            continue
+
+        conn, cur = connect_to_db(db=DB)
+
+        try:
+            cur.execute(f"ALTER TABLE {table[0]} ADD COLUMN {column} FLOAT;")
+        except:
+            my_logger.error(
+                f"database: create_stats_tables: "
+                f"Exception was raised when trying to add a column {column}."
+            )
+        finally:
+            close_db_connection(conn, cur)
+
+
+def add_stats_columns_for_each_table(tables: List[List[str]]) -> None:
+    # Add columns for each table
+    for table in tables:
+        add_stats_columns(table)
 
 
 def create_stats_tables(tables: List[List[str]]) -> None:
@@ -165,22 +237,9 @@ def create_stats_tables(tables: List[List[str]]) -> None:
                -- tables[i][0] is the name of the i-th table
                -- tables[i][1:] are the column names for the i-th table
     """
-    conn, cur = connect_to_db()
 
     # Create tables
     for table in tables:
-        conn, cur = connect_to_db(db=DB)
-
-        try:
-            cur.execute(f"DROP TABLE IF EXISTS {table[0]} ")
-        except:
-            print(
-                f"database: create_stats_table: "
-                f"Exception was raised when trying to drop table {table[0]}."
-            )
-        finally:
-            close_db_connection(conn, cur)
-
         conn, cur = connect_to_db(db=DB)
 
         try:
@@ -191,38 +250,12 @@ def create_stats_tables(tables: List[List[str]]) -> None:
                 f"FOREIGN KEY(id) REFERENCES info(id));"
             )
         except:
-            print(
+            my_logger.error(
                 f"database: create_stats_table: "
                 f"Exception was raised when trying to create table {table[0]}."
             )
         finally:
             close_db_connection(conn, cur)
-
-        # Add columns for each table
-        for index, column in enumerate(table):
-
-            # Don't create columns for table name and other string columns
-            if index == 0 or column in [
-                "season",
-                "squad",
-                "team",
-                "country",
-                "comp_level",
-                "lg_finish",
-            ]:
-                continue
-
-            conn, cur = connect_to_db(db=DB)
-
-            try:
-                cur.execute(f"ALTER TABLE {table[0]} ADD COLUMN {column} FLOAT;")
-            except:
-                print(
-                    f"database: create_stats_tables: "
-                    f"Exception was raised when trying to add a column {column}."
-                )
-            finally:
-                close_db_connection(conn, cur)
 
 
 def add_info(info: Dict) -> None:
@@ -239,18 +272,21 @@ def add_info(info: Dict) -> None:
 
         # Insert primary key
         if key == "id":
-            conn, cur = connect_to_db(db=DB)
+            continue
 
-            try:
-                cur.execute(f"REPLACE INTO info ({key}) " f"VALUES ('{info[key]}');")
-                conn.commit()
-            except:
-                print(
-                    "database: add_info: "
-                    "Exception was raised when trying to insert primary key (id)."
-                )
-            finally:
-                close_db_connection(conn, cur)
+            # conn, cur = connect_to_db(db=DB)
+            #
+            # try:
+            #     cur.execute(f"REPLACE INTO info ({key}) "
+            #                 f"VALUES ('{info[key]}');")
+            #     conn.commit()
+            # except:
+            #     my_logger.error(
+            #         "database: add_info: "
+            #         "Exception was raised when trying to insert primary key (id)."
+            #     )
+            # finally:
+            #     close_db_connection(conn, cur)
 
         # Insert data
         else:
@@ -264,16 +300,16 @@ def add_info(info: Dict) -> None:
                 )
                 conn.commit()
             except:
-                logging.error(key)
+                my_logger.error(key)
 
-                logging.error(info["id"])
+                my_logger.error(info["id"])
 
                 if key in info:
-                    logging.error(info[key])
+                    my_logger.error(info[key])
                 else:
-                    logging.error(f"{key} not in {info}")
+                    my_logger.error(f"{key} not in {info}")
 
-                print(
+                my_logger.error(
                     "database: add_info: Exception was raised when trying to update a column."
                 )
             finally:
@@ -303,11 +339,9 @@ def add_stats(stats: List[Dict]) -> None:
             cur.execute(statement)
             conn.commit()
         except Exception as e:
-            logging.error(e)
+            my_logger.error(e)
 
-            logging.error(statement)
-
-            print(
+            my_logger.error(
                 "database: add_stats: "
                 "Exception was raised when trying to insert string columns."
             )
@@ -342,11 +376,9 @@ def add_stats(stats: List[Dict]) -> None:
                 cur.execute(statement)
                 conn.commit()
             except Exception as e:
-                logging.error(e)
+                my_logger.error(e)
 
-                logging.error(statement)
-
-                print(
+                my_logger.error(
                     f"database: add_stats: "
                     f"Exception was raised when trying to update column {column} for player {row['id']}."
                 )

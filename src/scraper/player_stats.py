@@ -1,9 +1,11 @@
 # player_stats.py
 """Functions that scrape player stats."""
-
-
 from typing import List, Dict
 from requests import get_soup
+
+from src.scraper.logger import get_logger
+
+my_logger = get_logger(__name__)
 
 
 # Scrape player performance statistics from a single page
@@ -103,7 +105,7 @@ def get_stats_headers(url: str, tables: List[str]) -> List[List[str]]:
                 headers[-1].append(column)
 
         except:
-            print(
+            my_logger.error(
                 "player_stats: get_stats_headers: Something went wrong trying to scrape columns."
             )
 

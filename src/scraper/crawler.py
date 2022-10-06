@@ -1,14 +1,17 @@
 # crawler.py
 """Driver program. Iterates over Leagues, Squads, and Players
  and stores their information into a database."""
-
 import time
 from multiprocessing import Pool
 from typing import List
+
 import database as db
+from logger import get_logger
 from requests import get_players, get_squads
 from player_info import scrape_info
 from player_stats import get_stats_headers, scrape_stats
+
+my_logger = get_logger(__name__)
 
 # List of leagues to crawl
 LEAGUES = [
@@ -22,16 +25,16 @@ LEAGUES = [
 # List of tables to collect per player
 TABLES = [
     "stats_standard_dom_lg",
-    "stats_shooting_dom_lg",
-    "stats_passing_dom_lg",
-    "stats_passing_types_dom_lg",
-    "stats_gca_dom_lg",
-    "stats_defense_dom_lg",
-    "stats_possession_dom_lg",
-    "stats_playing_time_dom_lg",
-    "stats_misc_dom_lg",
-    "stats_keeper_dom_lg",
-    "stats_keeper_adv_dom_lg",
+    # "stats_shooting_dom_lg",
+    # "stats_passing_dom_lg",
+    # "stats_passing_types_dom_lg",
+    # "stats_gca_dom_lg",
+    # "stats_defense_dom_lg",
+    # "stats_possession_dom_lg",
+    # "stats_playing_time_dom_lg",
+    # "stats_misc_dom_lg",
+    # "stats_keeper_dom_lg",
+    # "stats_keeper_adv_dom_lg",
 ]
 
 
@@ -44,18 +47,18 @@ def scrape(player: str) -> None:
         player -- Unique player url path.
     """
 
-    time.sleep(0.5)
+    # time.sleep(0.5)
     player_start = time.time()
 
     player_info = scrape_info(player)
-    print(f'Id: {player_info["id"]}, Name: {player_info["name"]}')
+    my_logger.debug(f'Id: {player_info["id"]}, Name: {player_info["name"]}')
 
     db.add_info(player_info)
     db.add_stats(scrape_stats(player, TABLES))
 
     player_end = time.time()
 
-    print(
+    my_logger.info(
         f'Scraped and stored player data for Id: {player_info["id"]}, Name: {player_info["name"]}.'
         f" Elapsed time = {player_end - player_start:.2f}s."
     )
@@ -70,13 +73,17 @@ def crawl(leagues: List[str]) -> None:
          leagues -- list of URLs of soccer leagues to scrape
     """
 
+    start = time.time()
+
     # A single player will be used to determine the table format
     PLAYER = "/en/players/1840e36d/Thibaut-Courtois"
     player_tables = get_stats_headers(PLAYER, TABLES)
 
     db.create_db()
     db.create_info_table()
+    db.add_info_columns()
     db.create_stats_tables(player_tables)
+    db.add_stats_columns_for_each_table(player_tables)
 
     pool = Pool(processes=None)
 
@@ -86,6 +93,12 @@ def crawl(leagues: List[str]) -> None:
                 pool.apply_async(scrape, args=(player,))
     pool.close()
     pool.join()
+
+    end = time.time()
+
+    my_logger.info(
+        f" Total elapsed time = {end - start:.2f}s."
+    )
 
 
 if __name__ == "__main__":

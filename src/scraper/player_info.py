@@ -1,14 +1,14 @@
 # player_info.py
 """Function to scrape the general player information."""
 
-from asyncio.log import logger
-from cmath import log
-import re
+
 from datetime import date
-from time import strptime
 from requests import get_soup
-import logging
 import json
+
+from src.scraper.logger import get_logger
+
+my_logger = get_logger(__name__)
 
 
 def scrape_info(player):
@@ -28,9 +28,7 @@ def scrape_info(player):
     try:
         header = json.loads(soup.find("script", type="application/ld+json").string)
     except:
-        logging.error("header error")
-
-    # header = soup.find("div", {"itemtype": "https://schema.org/Person"})
+        my_logger.error("header error")
 
     # Store general player info in a dictionary
     info = {}
@@ -39,7 +37,7 @@ def scrape_info(player):
     try:
         info["id"] = player[12:20]
     except:
-        print(
+        my_logger.error(
             "playerInfo: scrape_info: Exception was raised when trying to scrape player id."
         )
 
@@ -63,12 +61,11 @@ def scrape_info(player):
         if secondname != "":
             info["name"] = f"{firstname} {secondname}"
 
-        logging.info(f"name: {info['name']}")
     except:
-        print(
+        my_logger.error(
             "playerInfo: scrape_info: Exception was raised when trying to scrape player name."
         )
-        logging.error(header)
+        my_logger.error(header)
         exit(0)
 
     # Find the player's preferred position(s)
@@ -79,7 +76,7 @@ def scrape_info(player):
     #         .replace("\xa0", "")
     #     )
     # except:
-    #     print(
+    #     my_logger.error(
     #         "playerInfo: scrape_info: Exception was raised when trying to scrape player position."
     #     )
 
@@ -87,7 +84,7 @@ def scrape_info(player):
     # try:
     #     info["foot"] = header.find(text="Footed:").parent.next_sibling.lstrip()
     # except:
-    #     print(
+    #     my_logger.error(
     #         "playerInfo: scrape_info: Exception was raised when trying to scrape player foot."
     #     )
 
@@ -95,8 +92,8 @@ def scrape_info(player):
     try:
         info["height"] = int(header["height"]["value"].split()[0])
     except:
-        logging.error(header["height"]["value"])
-        print(
+        my_logger.error(header["height"]["value"])
+        my_logger.error(
             "playerInfo: scrape_info: Exception was raised when trying to scrape player height."
         )
 
@@ -104,8 +101,8 @@ def scrape_info(player):
     try:
         info["weight"] = int(header["weight"]["value"].split()[0])
     except:
-        logging.error(header["weight"]["value"])
-        print(
+        my_logger.error(header["weight"]["value"])
+        my_logger.error(
             "playerInfo: scrape_info: Exception was raised when trying to scrape player weight."
         )
 
@@ -113,19 +110,19 @@ def scrape_info(player):
     try:
         info["dob"] = header["birthDate"]
     except:
-        print(
+        my_logger.error(
             "playerInfo: scrape_info: Exception was raised when trying to scrape player dob."
         )
 
     # Find player's city of birth
-    try:
-        info["cityob"] = header["birthPlace"].split(",")[0]
-    except:
-        print(
-            "playerInfo: scrape_info: Exception was raised when trying to scrape player cityob."
-        )
+    # try:
+    #     info["cityob"] = header["birthPlace"].split(",")[0]
+    # except:
+    #     my_logger.error(
+    #         "playerInfo: scrape_info: Exception was raised when trying to scrape player cityob."
+    #     )
 
-    # Find player;s country of birth
+    # Find player's country of birth
     try:
         splitted_birthPlace = header["birthPlace"].split(",")
 
@@ -136,9 +133,9 @@ def scrape_info(player):
 
         info["countryob"] = country
     except:
-        logging.error(header["birthPLace"])
+        my_logger.error(header["birthPLace"])
 
-        print(
+        my_logger.error(
             "playerInfo: scrape_info: Exception was raised when trying to scrape player countryob."
         )
 
@@ -148,7 +145,7 @@ def scrape_info(player):
     #         strip=True
     #     )
     # except:
-    #     print(
+    #     my_logger.error(
     #         "playerInfo: scrape_info: Exception was raised when trying to scrape player nt."
     #     )
 
@@ -156,7 +153,7 @@ def scrape_info(player):
     try:
         info["club"] = header["memberOf"]["name"]
     except:
-        print(
+        my_logger.error(
             "playerInfo: scrape_info: Exception was raised when trying to scrape player club."
         )
 
@@ -164,7 +161,7 @@ def scrape_info(player):
     try:
         info["age"] = get_age(info["dob"])
     except:
-        print(
+        my_logger.error(
             "playerInfo: scrape_info: Exception was raised when trying to scrape player age."
         )
 
@@ -192,7 +189,7 @@ def get_age(birthdate: str) -> int:
             - ((today.month, today.day) < (birthdate_month, birthdate_day))
         )
     except (IndexError, AttributeError, ValueError) as e:
-        print("player_info: get_age: ", e)
+        my_logger.error("player_info: get_age: ", e)
         return None
 
     return age

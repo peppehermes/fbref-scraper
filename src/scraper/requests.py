@@ -1,6 +1,5 @@
 # requests.py
 """Contains the functions for making HTML requests and creating BeautifulSoup objects."""
-
 import re
 from urllib.request import urlopen
 from urllib.request import Request
@@ -8,6 +7,9 @@ from urllib.error import URLError
 from typing import List
 from bs4 import BeautifulSoup
 
+from logger import get_logger
+
+my_logger = get_logger(__name__)
 
 def get_soup(url: str) -> BeautifulSoup:
     """
@@ -25,19 +27,19 @@ def get_soup(url: str) -> BeautifulSoup:
             #                                               'q=0.9,image/webp,*/*;q=0.8'}
         )
     except ValueError as e:
-        print("requests: get_soup: ", e)
+        my_logger.error("requests: get_soup: ", e)
         return None
 
     try:
         html = urlopen(request)
     except (ValueError, URLError) as e:
-        print("requests: get_soup: ", e)
+        my_logger.error("requests: get_soup: ", e)
         return None
 
     try:
         return BeautifulSoup(html, "html.parser")
     except Exception as e:
-        print("requests: get_soup: ", e)
+        my_logger.error("requests: get_soup: ", e)
         return None
 
 
