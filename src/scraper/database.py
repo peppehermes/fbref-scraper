@@ -4,12 +4,8 @@
 from typing import List, Dict
 import mysql.connector
 import os
-from dotenv import load_dotenv
 
 from src.scraper.logger import get_logger
-
-# Config
-load_dotenv()
 
 DB = os.getenv("DATABASE")
 HOST = os.getenv("DB_HOST")
@@ -28,6 +24,8 @@ def connect_to_db(db=None):
         conn -- MySQL connection object
         cur -- database cursor for the current connection
     """
+    conn = cur = None
+
     try:
         conn = mysql.connector.connect(
             host=HOST,
@@ -37,14 +35,14 @@ def connect_to_db(db=None):
         )
 
         cur = conn.cursor()
-        return conn, cur
-
     except Exception as e:
         my_logger.error(e)
         my_logger.error(
             "database: connect_to_db: "
             "Exception was raised when trying to establish a connection to mysql."
         )
+    finally:
+        return conn, cur
 
 
 def close_db_connection(conn, cur) -> bool:
@@ -55,82 +53,40 @@ def close_db_connection(conn, cur) -> bool:
         conn -- pymysql database connection object
         cur -- database cursor object
     """
+    res = False
+
     try:
         cur.close()
         conn.close()
-        return True
+        res = True
     except:
         my_logger.error(
             "database: close_db_connection: "
             "Exception was raised when trying to close the connection/cursor."
         )
-        return False
+    finally:
+        return res
 
 
-def create_db(db=None) -> bool:
+def create_db(db) -> bool:
     """ Create database """
     conn, cur = connect_to_db()
+    res = False
 
     try:
         cur.execute(f"CREATE DATABASE IF NOT EXISTS {db};")
-        return True
+        res = True
     except:
         my_logger.error(
             f"database: create_db: "
             f"Exception was raised when trying to create database {db}."
         )
-        return False
     finally:
         close_db_connection(conn, cur)
+        return res
 
 
-def drop_info_table() -> None:
-    conn, cur = connect_to_db(db=DB)
-
-    try:
-        cur.execute("DROP TABLE IF EXISTS info;")
-    except:
-        my_logger.error(
-            f"database: create_info_table: "
-            f"Exception was raised when trying to drop table info."
-        )
-    finally:
-        close_db_connection(conn, cur)
-
-
-def add_int_column_info_table(column) -> None:
-    # Add column with int type
-    if isinstance(column, int):
-        conn, cur = connect_to_db(db=DB)
-
-        try:
-            cur.execute(f"ALTER TABLE info ADD COLUMN IF NOT EXISTS {column} INT;")
-        except Exception as e:
-            my_logger.error(e)
-            my_logger.error(
-                f"database: create_info_table: "
-                f"Exception was raised when trying to add int column {column}."
-            )
-        finally:
-            close_db_connection(conn, cur)
-
-
-def add_string_column_info_table(column) -> None:
-    # Add column with string type
-    conn, cur = connect_to_db(db=DB)
-
-    try:
-        cur.execute(f"ALTER TABLE info ADD COLUMN IF NOT EXISTS {column} VARCHAR(50);")
-    except:
-        my_logger.error(
-            f"database: create_info_table: "
-            f"Exception was raised when trying to add string column {column}."
-        )
-    finally:
-        close_db_connection(conn, cur)
-
-
-def create_info_table() -> None:
+def create_info_table() -> bool:
     """
     Create a database table to hold general information about a player.
     This db table is created separately from the stats tables because
@@ -138,44 +94,108 @@ def create_info_table() -> None:
     """
 
     conn, cur = connect_to_db(db=DB)
+    res = False
 
     try:
         cur.execute(
             "CREATE TABLE IF NOT EXISTS "
             "info (id VARCHAR(8) NOT NULL, "
             "created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+            "name VARCHAR(50), "
+            "height INT, "
+            "weight INT, "
+            "dob VARCHAR(50), "
+            "countryob VARCHAR(50), "
+            "club VARCHAR(50), "
+            "age INT, "
             "PRIMARY KEY(id));"
         )
+        res = True
     except:
         my_logger.error(
             "database: create_info_table: Exception was raised when trying to create a table."
         )
     finally:
         close_db_connection(conn, cur)
+        return res
 
 
-def add_info_columns() -> None:
-    HEADER = {
-        "name": "",
-        "height": 0,
-        "weight": 0,
-        "dob": "",
-        "cityob": "",
-        "countryob": "",
-        "club": "",
-        "age": 0,
-    }
+def drop_info_table() -> bool:
+    conn, cur = connect_to_db(db=DB)
+    res = False
 
-    # Add columns
-    for col in HEADER:
+    try:
+        cur.execute("DROP TABLE IF EXISTS info;")
+        res = True
+    except:
+        my_logger.error(
+            f"database: drop_info_table: "
+            f"Exception was raised when trying to drop table info."
+        )
+    finally:
+        close_db_connection(conn, cur)
+        return res
 
-        # Add columns with int type
-        if isinstance(HEADER[col], int):
-            add_int_column_info_table(col)
 
-        # Add columns with string type
-        else:
-            add_string_column_info_table(col)
+# def add_int_column_info_table(column) -> bool:
+#     # Add column with int type
+#     res = False
+#     conn, cur = connect_to_db(db=DB)
+#
+#     try:
+#         cur.execute(f"ALTER TABLE info ADD COLUMN IF NOT EXISTS {column} INT;")
+#         res = True
+#     except Exception as e:
+#         my_logger.error(e)
+#         my_logger.error(
+#             f"database: create_info_table: "
+#             f"Exception was raised when trying to add int column {column}."
+#         )
+#     finally:
+#         close_db_connection(conn, cur)
+#         return res
+#
+#
+# def add_string_column_info_table(column) -> None:
+#     # Add column with string type
+#     res = False
+#     conn, cur = connect_to_db(db=DB)
+#
+#     try:
+#         cur.execute(f"ALTER TABLE info ADD COLUMN IF NOT EXISTS {column} VARCHAR(50);")
+#         res = True
+#     except:
+#         my_logger.error(
+#             f"database: create_info_table: "
+#             f"Exception was raised when trying to add string column {column}."
+#         )
+#     finally:
+#         close_db_connection(conn, cur)
+#         return res
+#
+#
+# def add_info_columns() -> None:
+#     HEADER = {
+#         "name": "",
+#         "height": 0,
+#         "weight": 0,
+#         "dob": "",
+#         "cityob": "",
+#         "countryob": "",
+#         "club": "",
+#         "age": 0,
+#     }
+#
+#     # Add columns
+#     for col in HEADER:
+#
+#         # Add columns with int type
+#         if isinstance(HEADER[col], int):
+#             add_int_column_info_table(col)
+#
+#         # Add columns with string type
+#         else:
+#             add_string_column_info_table(col)
 
 
 def drop_stats_table(table: str) -> None:
@@ -262,7 +282,27 @@ def create_stats_tables(tables: List[List[str]]) -> None:
             close_db_connection(conn, cur)
 
 
-def add_info(info: Dict) -> None:
+def select_info(player_id: str):
+    conn, cur = connect_to_db(db=DB)
+    res = None
+
+    try:
+        cur.execute("SELECT * FROM info WHERE id = '( %s )';" % player_id)
+
+        res = cur.fetchall()
+    except Exception as e:
+        my_logger.error(e)
+        my_logger.error(
+            "database: select_info: "
+            f"Exception was raised when trying to select from info where id = {player_id}."
+        )
+    finally:
+        close_db_connection(conn, cur)
+
+    return res
+
+
+def add_info(info: Dict) -> bool:
     """
     Inserts the general information about a player (name, age, position, etc.) into
     the info table.
@@ -272,52 +312,26 @@ def add_info(info: Dict) -> None:
              -- for example {'name':'Thibaut Courtois', 'position':'GK', ..., 'age':29}
     """
     # Add data into the info table
-    for key in info:
+    conn, cur = connect_to_db(db=DB)
+    res = True
 
-        # Insert primary key
-        if key == "id":
-            continue
+    try:
+        placeholders = ', '.join(['%s'] * len(info))
+        columns = ', '.join(info.keys())
+        sql = "REPLACE INTO info ( %s ) VALUES ( %s );" % (columns, placeholders)
 
-            # conn, cur = connect_to_db(db=DB)
-            #
-            # try:
-            #     cur.execute(f"REPLACE INTO info ({key}) "
-            #                 f"VALUES ('{info[key]}');")
-            #     conn.commit()
-            # except:
-            #     my_logger.error(
-            #         "database: add_info: "
-            #         "Exception was raised when trying to insert primary key (id)."
-            #     )
-            # finally:
-            #     close_db_connection(conn, cur)
+        cur.execute(sql, list(info.values()))
+        conn.commit()
+    except:
+        res = False
+        my_logger.error(
+            "database: add_info: "
+            "Exception was raised when trying to insert primary key (id)."
+        )
+    finally:
+        close_db_connection(conn, cur)
 
-        # Insert data
-        else:
-            conn, cur = connect_to_db(db=DB)
-
-            try:
-                cur.execute(
-                    f"UPDATE info "
-                    f'SET {key} = "{info[key]}"'
-                    f'WHERE id = "{info["id"]}";'
-                )
-                conn.commit()
-            except:
-                my_logger.error(key)
-
-                my_logger.error(info["id"])
-
-                if key in info:
-                    my_logger.error(info[key])
-                else:
-                    my_logger.error(f"{key} not in {info}")
-
-                my_logger.error(
-                    "database: add_info: Exception was raised when trying to update a column."
-                )
-            finally:
-                close_db_connection(conn, cur)
+    return res
 
 
 def add_stats(stats: List[Dict]) -> None:

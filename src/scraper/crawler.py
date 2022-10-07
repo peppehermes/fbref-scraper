@@ -5,9 +5,13 @@ import os
 import time
 from multiprocessing import Pool
 from typing import List
+from dotenv import load_dotenv
+
+# Config
+load_dotenv()
 
 import database as db
-from logger import get_logger
+from src.scraper.logger import get_logger
 from requests import get_players, get_squads
 from player_info import scrape_info
 from player_stats import get_stats_headers, scrape_stats
@@ -82,7 +86,7 @@ def crawl(leagues: List[str]) -> None:
 
     db.create_db(os.getenv("DATABASE"))
     db.create_info_table()
-    db.add_info_columns()
+    # db.add_info_columns()
     db.create_stats_tables(player_tables)
     db.add_stats_columns_for_each_table(player_tables)
 

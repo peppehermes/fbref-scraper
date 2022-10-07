@@ -7,7 +7,7 @@ from urllib.error import URLError
 from typing import List
 from bs4 import BeautifulSoup
 
-from logger import get_logger
+from src.scraper.logger import get_logger
 
 my_logger = get_logger(__name__)
 
