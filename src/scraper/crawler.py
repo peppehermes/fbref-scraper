@@ -1,6 +1,7 @@
 # crawler.py
 """Driver program. Iterates over Leagues, Squads, and Players
  and stores their information into a database."""
+import os
 import time
 from multiprocessing import Pool
 from typing import List
@@ -79,7 +80,7 @@ def crawl(leagues: List[str]) -> None:
     PLAYER = "/en/players/1840e36d/Thibaut-Courtois"
     player_tables = get_stats_headers(PLAYER, TABLES)
 
-    db.create_db()
+    db.create_db(os.getenv("DATABASE"))
     db.create_info_table()
     db.add_info_columns()
     db.create_stats_tables(player_tables)

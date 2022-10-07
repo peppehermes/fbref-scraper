@@ -3,19 +3,37 @@
 
 from typing import List, Dict
 import mysql.connector
+import os
+from dotenv import load_dotenv
 
 from src.scraper.logger import get_logger
 
-DB = "SoccerStats"
+# Config
+load_dotenv()
+
+DB = os.getenv("DATABASE")
+HOST = os.getenv("DB_HOST")
+USER = os.getenv("DB_USER")
+PSW = os.getenv("DB_PSW")
+
+# Logging
 my_logger = get_logger(__name__)
 
 
-def create_connection(database=None):
-    """ Create a database connection to a MySQL database """
-    conn = None
+def connect_to_db(db=None):
+    """
+    Create a database connection to a MySQL database
+
+    Returns:
+        conn -- MySQL connection object
+        cur -- database cursor for the current connection
+    """
     try:
         conn = mysql.connector.connect(
-            host="localhost", user="microservice", password="MyFirstMicroservice", database=database
+            host=HOST,
+            user=USER,
+            password=PSW,
+            database=db
         )
 
         cur = conn.cursor()
@@ -29,25 +47,7 @@ def create_connection(database=None):
         )
 
 
-def connect_to_db(db=None):
-    """
-    Establish a connection with the database.
-
-    Returns:
-        conn -- sqlite connection object
-        cur -- database cursor for the current connection
-    """
-    try:
-        return create_connection(database=db)
-
-    except:
-        my_logger.error(
-            "database: connect_to_db: "
-            "Exception was raised when trying to establish a connection to mysql."
-        )
-
-
-def close_db_connection(conn, cur) -> None:
+def close_db_connection(conn, cur) -> bool:
     """
     Close the database connection and the database cursor.
 
@@ -58,24 +58,28 @@ def close_db_connection(conn, cur) -> None:
     try:
         cur.close()
         conn.close()
+        return True
     except:
         my_logger.error(
             "database: close_db_connection: "
             "Exception was raised when trying to close the connection/cursor."
         )
+        return False
 
 
-def create_db():
-    """ Create the SoccerStats database """
+def create_db(db=None) -> bool:
+    """ Create database """
     conn, cur = connect_to_db()
 
     try:
-        cur.execute(f"CREATE DATABASE IF NOT EXISTS {DB};")
+        cur.execute(f"CREATE DATABASE IF NOT EXISTS {db};")
+        return True
     except:
         my_logger.error(
             f"database: create_db: "
-            f"Exception was raised when trying to create database {DB}."
+            f"Exception was raised when trying to create database {db}."
         )
+        return False
     finally:
         close_db_connection(conn, cur)
 
@@ -370,7 +374,7 @@ def add_stats(stats: List[Dict]) -> None:
                 team = row["team"].replace("'", "\\'")
                 team = team.replace('"', '\\"')
 
-                statement = f"""UPDATE {row['table']} SET {column} = {float(row[column].replace(',',''))}
+                statement = f"""UPDATE {row['table']} SET {column} = {float(row[column].replace(',', ''))}
                             WHERE id = '{row['id']}' AND season = '{row['season']}' AND squad = "{team}";"""
 
                 cur.execute(statement)
