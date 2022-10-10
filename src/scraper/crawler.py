@@ -84,11 +84,13 @@ def crawl(leagues: List[str]) -> None:
     PLAYER = "/en/players/1840e36d/Thibaut-Courtois"
     player_tables = get_stats_headers(PLAYER, TABLES)
 
+    my_logger.info(player_tables)
+
     db.create_db(os.getenv("DATABASE"))
     db.create_info_table()
     # db.add_info_columns()
     db.create_stats_tables(player_tables)
-    db.add_stats_columns_for_each_table(player_tables)
+    # db.add_stats_columns_for_each_table(player_tables)
 
     pool = Pool(processes=None)
 

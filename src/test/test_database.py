@@ -69,21 +69,49 @@ class TestInfo(TestCase):
 
 class TestStats(TestCase):
     def test_create_stats_tables(self):
-        self.fail()
+        player_tables = [
+            [
+                "standard",
+                "age",
+                "team",
+                "country",
+                "comp_level",
+                "lg_finish",
+                "games",
+                "games_starts",
+                "minutes",
+                "minutes_90s",
+                "goals",
+                "assists",
+                "goals_pens",
+                "pens_made",
+                "pens_att",
+                "cards_yellow",
+                "cards_red",
+                "goals_per90",
+                "assists_per90",
+                "goals_assists_per90",
+                "goals_pens_per90",
+                "goals_assists_pens_per90",
+                "xg",
+                "npxg",
+                "xa",
+                "npxg_xa",
+                "xg_per90",
+                "xa_per90",
+                "xg_xa_per90",
+                "npxg_per90",
+                "npxg_xa_per90",
+            ]
+        ]
+
+        self.assertTrue(db.create_stats_tables(player_tables))
 
     def test_drop_stats_table(self):
         self.fail()
 
     def test_drop_stats_tables(self):
         self.fail()
-
-    def test_add_stats_columns(self):
-        self.fail()
-
-    def test_add_stats_columns_for_each_table(self):
-        self.fail()
-
-
 
     def test_add_stats(self):
         self.fail()

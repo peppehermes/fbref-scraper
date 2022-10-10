@@ -27,12 +27,7 @@ def connect_to_db(db=None):
     conn = cur = None
 
     try:
-        conn = mysql.connector.connect(
-            host=HOST,
-            user=USER,
-            password=PSW,
-            database=db
-        )
+        conn = mysql.connector.connect(host=HOST, user=USER, password=PSW, database=db)
 
         cur = conn.cursor()
     except Exception as e:
@@ -69,7 +64,7 @@ def close_db_connection(conn, cur) -> bool:
 
 
 def create_db(db) -> bool:
-    """ Create database """
+    """Create database"""
     conn, cur = connect_to_db()
     res = False
 
@@ -137,151 +132,6 @@ def drop_info_table() -> bool:
         return res
 
 
-# def add_int_column_info_table(column) -> bool:
-#     # Add column with int type
-#     res = False
-#     conn, cur = connect_to_db(db=DB)
-#
-#     try:
-#         cur.execute(f"ALTER TABLE info ADD COLUMN IF NOT EXISTS {column} INT;")
-#         res = True
-#     except Exception as e:
-#         my_logger.error(e)
-#         my_logger.error(
-#             f"database: create_info_table: "
-#             f"Exception was raised when trying to add int column {column}."
-#         )
-#     finally:
-#         close_db_connection(conn, cur)
-#         return res
-#
-#
-# def add_string_column_info_table(column) -> None:
-#     # Add column with string type
-#     res = False
-#     conn, cur = connect_to_db(db=DB)
-#
-#     try:
-#         cur.execute(f"ALTER TABLE info ADD COLUMN IF NOT EXISTS {column} VARCHAR(50);")
-#         res = True
-#     except:
-#         my_logger.error(
-#             f"database: create_info_table: "
-#             f"Exception was raised when trying to add string column {column}."
-#         )
-#     finally:
-#         close_db_connection(conn, cur)
-#         return res
-#
-#
-# def add_info_columns() -> None:
-#     HEADER = {
-#         "name": "",
-#         "height": 0,
-#         "weight": 0,
-#         "dob": "",
-#         "cityob": "",
-#         "countryob": "",
-#         "club": "",
-#         "age": 0,
-#     }
-#
-#     # Add columns
-#     for col in HEADER:
-#
-#         # Add columns with int type
-#         if isinstance(HEADER[col], int):
-#             add_int_column_info_table(col)
-#
-#         # Add columns with string type
-#         else:
-#             add_string_column_info_table(col)
-
-
-def drop_stats_table(table: str) -> None:
-    conn, cur = connect_to_db(db=DB)
-
-    try:
-        cur.execute(f"DROP TABLE IF EXISTS {table} ")
-    except:
-        my_logger.error(
-            f"database: create_stats_table: "
-            f"Exception was raised when trying to drop table {table}."
-        )
-    finally:
-        close_db_connection(conn, cur)
-
-
-def drop_stats_tables(tables: List[List[str]]) -> None:
-    # Drop tables
-    for table in tables:
-        drop_stats_table(table[0])
-
-
-def add_stats_columns(table: List[str]) -> None:
-    # Add columns
-    for index, column in enumerate(table):
-
-        # Don't create columns for table name and other string columns
-        if index == 0 or column in [
-            "season",
-            "squad",
-            "team",
-            "country",
-            "comp_level",
-            "lg_finish",
-        ]:
-            continue
-
-        conn, cur = connect_to_db(db=DB)
-
-        try:
-            cur.execute(f"ALTER TABLE {table[0]} ADD COLUMN {column} FLOAT;")
-        except:
-            my_logger.error(
-                f"database: create_stats_tables: "
-                f"Exception was raised when trying to add a column {column}."
-            )
-        finally:
-            close_db_connection(conn, cur)
-
-
-def add_stats_columns_for_each_table(tables: List[List[str]]) -> None:
-    # Add columns for each table
-    for table in tables:
-        add_stats_columns(table)
-
-
-def create_stats_tables(tables: List[List[str]]) -> None:
-    """
-    Create the stats tables if they don't exist.
-
-    Arguments:
-        tables -- a list of string lists,
-               -- tables[i][0] is the name of the i-th table
-               -- tables[i][1:] are the column names for the i-th table
-    """
-
-    # Create tables
-    for table in tables:
-        conn, cur = connect_to_db(db=DB)
-
-        try:
-            cur.execute(
-                f"CREATE TABLE IF NOT EXISTS {table[0]} "
-                f"(id VARCHAR(8) NOT NULL, season VARCHAR(20) NOT NULL, country VARCHAR(30), comp_level VARCHAR(30), "
-                f"lg_finish VARCHAR(10), squad VARCHAR(50) NOT NULL, PRIMARY KEY(id, season, squad), "
-                f"FOREIGN KEY(id) REFERENCES info(id));"
-            )
-        except:
-            my_logger.error(
-                f"database: create_stats_table: "
-                f"Exception was raised when trying to create table {table[0]}."
-            )
-        finally:
-            close_db_connection(conn, cur)
-
-
 def select_info(player_id: str):
     conn, cur = connect_to_db(db=DB)
     res = None
@@ -316,8 +166,8 @@ def add_info(info: Dict) -> bool:
     res = True
 
     try:
-        placeholders = ', '.join(['%s'] * len(info))
-        columns = ', '.join(info.keys())
+        placeholders = ", ".join(["%s"] * len(info))
+        columns = ", ".join(info.keys())
         sql = "REPLACE INTO info ( %s ) VALUES ( %s );" % (columns, placeholders)
 
         cur.execute(sql, list(info.values()))
@@ -332,6 +182,119 @@ def add_info(info: Dict) -> bool:
         close_db_connection(conn, cur)
 
     return res
+
+
+def create_stats_tables(tables: List[List[str]]) -> bool:
+    """
+    Create the stats tables if they don't exist.
+
+    Arguments:
+        tables -- a list of string lists,
+               -- tables[i][0] is the name of the i-th table
+               -- tables[i][1:] are the column names for the i-th table
+    """
+    res = True
+
+    base_column = [
+        "season",
+        "squad",
+        "team",
+        "country",
+        "comp_level",
+        "lg_finish",
+    ]
+
+    # Create tables
+    for table in tables:
+        conn, cur = connect_to_db(db=DB)
+
+        try:
+            table_name = table[0]
+            columns = table[1:]
+
+            columns = list(set(columns) - set(base_column))
+
+            sql_statement = f"""CREATE TABLE IF NOT EXISTS {table_name}
+            (id VARCHAR(8) NOT NULL,
+            season VARCHAR(20) NOT NULL,
+            country VARCHAR(30),
+            comp_level VARCHAR(30),
+            lg_finish VARCHAR(10),
+            squad VARCHAR(50) NOT NULL, """
+
+            for column in columns:
+                sql_statement += f"{column} FLOAT, "
+
+            sql_statement += (
+                "PRIMARY KEY(id, season, squad), FOREIGN KEY(id) REFERENCES info(id));"
+            )
+
+            cur.execute(sql_statement)
+        except Exception as e:
+            res = False
+
+            my_logger.error(e)
+            my_logger.error(
+                f"database: create_stats_table: "
+                f"Exception was raised when trying to create table {table[0]}."
+            )
+        finally:
+            close_db_connection(conn, cur)
+
+        return res
+
+
+# def add_stats_columns(table: List[str]) -> None:
+#     # Add columns
+#     for index, column in enumerate(table):
+#
+#         # Don't create columns for table name and other string columns
+#         if index == 0 or column in [
+#             "season",
+#             "squad",
+#             "team",
+#             "country",
+#             "comp_level",
+#             "lg_finish",
+#         ]:
+#             continue
+#
+#         conn, cur = connect_to_db(db=DB)
+#
+#         try:
+#             cur.execute(f"ALTER TABLE {table[0]} ADD COLUMN {column} FLOAT;")
+#         except:
+#             my_logger.error(
+#                 f"database: create_stats_tables: "
+#                 f"Exception was raised when trying to add a column {column}."
+#             )
+#         finally:
+#             close_db_connection(conn, cur)
+
+# def add_stats_columns_for_each_table(tables: List[List[str]]) -> None:
+#     # Add columns for each table
+#     for table in tables:
+#         add_stats_columns(table)
+
+
+def drop_stats_table(table: str) -> None:
+    conn, cur = connect_to_db(db=DB)
+
+    try:
+        cur.execute(f"DROP TABLE IF EXISTS {table} ")
+    except:
+        my_logger.error(
+            f"database: create_stats_table: "
+            f"Exception was raised when trying to drop table {table}."
+        )
+    finally:
+        close_db_connection(conn, cur)
+
+
+def drop_stats_tables(tables: List[List[str]]) -> None:
+    # Drop tables
+    for table in tables:
+        drop_stats_table(table[0])
 
 
 def add_stats(stats: List[Dict]) -> None:
