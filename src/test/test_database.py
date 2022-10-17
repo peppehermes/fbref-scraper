@@ -43,9 +43,6 @@ class TestInfo(TestCase):
     def test_create_info_table(self):
         self.assertTrue(db.create_info_table())
 
-    def test_drop_info_table(self):
-        self.assertTrue(db.drop_info_table())
-
     def test_add_info(self):
         player_info = {
             "id": "0d9b2d31",
@@ -58,13 +55,15 @@ class TestInfo(TestCase):
             "age": 19,
         }
 
-        db.create_info_table()
         self.assertTrue(db.add_info(player_info))
 
     def test_select_info(self):
         player_id = "0d9b2d31"
 
         self.assertIsNotNone(db.select_info(player_id))
+
+    def test_drop_info_table(self):
+        self.assertTrue(db.drop_info_table())
 
 
 class TestStats(TestCase):

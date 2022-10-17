@@ -172,8 +172,9 @@ def add_info(info: Dict) -> bool:
 
         cur.execute(sql, list(info.values()))
         conn.commit()
-    except:
+    except Exception as e:
         res = False
+        my_logger.error(e)
         my_logger.error(
             "database: add_info: "
             "Exception was raised when trying to insert primary key (id)."
