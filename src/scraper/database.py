@@ -53,8 +53,10 @@ def close_db_connection(conn, cur) -> bool:
     try:
         cur.close()
         conn.close()
+
         res = True
-    except:
+    except Exception as e:
+        my_logger.error(e)
         my_logger.error(
             "database: close_db_connection: "
             "Exception was raised when trying to close the connection/cursor."
@@ -71,14 +73,16 @@ def create_db(db) -> bool:
     try:
         cur.execute(f"CREATE DATABASE IF NOT EXISTS {db};")
         res = True
-    except:
+    except Exception as e:
+        my_logger.error(e)
         my_logger.error(
             f"database: create_db: "
             f"Exception was raised when trying to create database {db}."
         )
     finally:
         close_db_connection(conn, cur)
-        return res
+
+    return res
 
 
 def create_info_table() -> bool:
@@ -105,14 +109,17 @@ def create_info_table() -> bool:
             "age INT, "
             "PRIMARY KEY(id));"
         )
+
         res = True
-    except:
+    except Exception as e:
+        my_logger.error(e)
         my_logger.error(
             "database: create_info_table: Exception was raised when trying to create a table."
         )
     finally:
         close_db_connection(conn, cur)
-        return res
+
+    return res
 
 
 def drop_info_table() -> bool:
@@ -122,14 +129,16 @@ def drop_info_table() -> bool:
     try:
         cur.execute("DROP TABLE IF EXISTS info;")
         res = True
-    except:
+    except Exception as e:
+        my_logger.error(e)
         my_logger.error(
             f"database: drop_info_table: "
             f"Exception was raised when trying to drop table info."
         )
     finally:
         close_db_connection(conn, cur)
-        return res
+
+    return res
 
 
 def select_info(player_id: str):
@@ -145,6 +154,26 @@ def select_info(player_id: str):
         my_logger.error(
             "database: select_info: "
             f"Exception was raised when trying to select from info where id = {player_id}."
+        )
+    finally:
+        close_db_connection(conn, cur)
+
+    return res
+
+
+def select_info_all():
+    conn, cur = connect_to_db(db=DB)
+    res = None
+
+    try:
+        cur.execute("SELECT * FROM info;")
+
+        res = cur.fetchall()
+    except Exception as e:
+        my_logger.error(e)
+        my_logger.error(
+            "database: select_info_all: "
+            f"Exception was raised when trying to select all from info."
         )
     finally:
         close_db_connection(conn, cur)
@@ -227,7 +256,8 @@ def create_stats_tables(tables: List[List[str]]) -> bool:
                 sql_statement += f"{column} FLOAT, "
 
             sql_statement += (
-                "PRIMARY KEY(id, season, squad), FOREIGN KEY(id) REFERENCES info(id));"
+                "PRIMARY KEY(id, season, squad), FOREIGN KEY(id) REFERENCES info(id) "
+                "ON DELETE CASCADE ON UPDATE CASCADE);"
             )
 
             cur.execute(sql_statement)
@@ -245,51 +275,23 @@ def create_stats_tables(tables: List[List[str]]) -> bool:
         return res
 
 
-# def add_stats_columns(table: List[str]) -> None:
-#     # Add columns
-#     for index, column in enumerate(table):
-#
-#         # Don't create columns for table name and other string columns
-#         if index == 0 or column in [
-#             "season",
-#             "squad",
-#             "team",
-#             "country",
-#             "comp_level",
-#             "lg_finish",
-#         ]:
-#             continue
-#
-#         conn, cur = connect_to_db(db=DB)
-#
-#         try:
-#             cur.execute(f"ALTER TABLE {table[0]} ADD COLUMN {column} FLOAT;")
-#         except:
-#             my_logger.error(
-#                 f"database: create_stats_tables: "
-#                 f"Exception was raised when trying to add a column {column}."
-#             )
-#         finally:
-#             close_db_connection(conn, cur)
-
-# def add_stats_columns_for_each_table(tables: List[List[str]]) -> None:
-#     # Add columns for each table
-#     for table in tables:
-#         add_stats_columns(table)
-
-
-def drop_stats_table(table: str) -> None:
+def drop_stats_table(table: str) -> bool:
     conn, cur = connect_to_db(db=DB)
+    res = False
 
     try:
         cur.execute(f"DROP TABLE IF EXISTS {table} ")
-    except:
+        res = True
+    except Exception as e:
+        my_logger.error(e)
         my_logger.error(
             f"database: create_stats_table: "
             f"Exception was raised when trying to drop table {table}."
         )
     finally:
         close_db_connection(conn, cur)
+
+    return res
 
 
 def drop_stats_tables(tables: List[List[str]]) -> None:
@@ -298,7 +300,47 @@ def drop_stats_tables(tables: List[List[str]]) -> None:
         drop_stats_table(table[0])
 
 
-def add_stats(stats: List[Dict]) -> None:
+def select_stats(player_id: str, table: str):
+    conn, cur = connect_to_db(db=DB)
+    res = None
+
+    try:
+        cur.execute("SELECT * FROM ( %s ) WHERE id = '( %s )';" % (table, player_id))
+
+        res = cur.fetchall()
+    except Exception as e:
+        my_logger.error(e)
+        my_logger.error(
+            "database: select_stats: "
+            f"Exception was raised when trying to select from {table} where id = {player_id}."
+        )
+    finally:
+        close_db_connection(conn, cur)
+
+    return res
+
+
+def select_stats_all(table: str) -> None:
+    conn, cur = connect_to_db(db=DB)
+    res = None
+
+    try:
+        cur.execute("SELECT * FROM ( %s );" % table)
+
+        res = cur.fetchall()
+    except Exception as e:
+        my_logger.error(e)
+        my_logger.error(
+            "database: select_stats_all: "
+            f"Exception was raised when trying to select all from {table}."
+        )
+    finally:
+        close_db_connection(conn, cur)
+
+    return res
+
+
+def add_stats(stats: List[Dict]) -> bool:
     """
     Insert player performance data into the appropriate table.
 
@@ -307,6 +349,7 @@ def add_stats(stats: List[Dict]) -> None:
               -- each dictionary represents a row of a table
               -- (for example playing time for a player in a single season)
     """
+    res = True
 
     # Iterate over the dictionaries each of which represents one row of a table
     for row in stats:
@@ -327,6 +370,8 @@ def add_stats(stats: List[Dict]) -> None:
                 "database: add_stats: "
                 "Exception was raised when trying to insert string columns."
             )
+
+            res = False
         finally:
             close_db_connection(conn, cur)
 
@@ -364,5 +409,9 @@ def add_stats(stats: List[Dict]) -> None:
                     f"database: add_stats: "
                     f"Exception was raised when trying to update column {column} for player {row['id']}."
                 )
+
+                res = False
             finally:
                 close_db_connection(conn, cur)
+
+    return res
