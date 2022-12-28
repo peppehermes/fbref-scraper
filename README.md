@@ -1,6 +1,18 @@
 # fbref-scraper
 A multithreaded web scraper that collects all player data from fbref.com for the top 5 European soccer leagues and stores it in a MySQL database. 
 
+## Init
+Create a .env file and place it under the "src/scraper" folder.  
+You have to define the following env variables:
+- DATABASE: the name of the DB you are connecting to
+- DB_HOST: the host number (i.e. 127.0.0.1, localhost...)
+- DB_USER: the username for DB connection
+- DB_PSW: the password for DB connection
+- LOG_FILE: tha name of the log file
+
+For testing purposes, you may create a new .env.test file under 
+the "src/test" folder.
+
 ## Crawler/Scraper
 A multithreaded web scraper using BeautifulSoup. Iteratively crawls through teams from the top 5 European soccer leagues and scrapes the player performance data for their players.
 <br>Sample run with 8 worker processes:
